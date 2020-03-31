@@ -2,6 +2,7 @@ package whizz
 
 import (
 	"log"
+	"time"
 
 	"github.com/infra-whizz/wzlib"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
@@ -13,22 +14,34 @@ type WzChannels struct {
 }
 
 type WzClient struct {
-	channels  *WzChannels
-	transport *wzlib_transport.WzdPubSub
+	channels        *WzChannels
+	transport       *wzlib_transport.WzdPubSub
+	replies         []*wzlib_transport.WzGenericMessage
+	expectedReplies int64
 }
 
 func NewWhizzClient() *WzClient {
 	wzc := new(WzClient)
 	wzc.transport = wzlib_transport.NewWizPubSub()
 	wzc.channels = new(WzChannels)
+	wzc.replies = make([]*wzlib_transport.WzGenericMessage, 0)
 	return wzc
 }
 
+// Controller replied
 func (wzc *WzClient) onControllerReplyEvent(msg *nats.Msg) {
-	log.Println("received from console channel:", len(msg.Data), "bytes")
-	envelope := wzlib.NewWzConsoleReplyMessage()
-	envelope.LoadBytes(msg.Data)
-	log.Println("Jid:", envelope.Jid)
+	envelope := wzlib_transport.NewWzGenericMessage()
+	if err := envelope.LoadBytes(msg.Data); err != nil {
+		log.Println(err.Error())
+	} else {
+		batchMax, ok := envelope.Payload["batch.max"]
+		if !ok || batchMax == nil {
+			log.Println("Discarding controller reply: no batch.max defined")
+		} else {
+			wzc.expectedReplies = batchMax.(int64)
+			wzc.replies = append(wzc.replies, envelope)
+		}
+	}
 }
 
 func (wzc *WzClient) initialise() {
@@ -36,29 +49,44 @@ func (wzc *WzClient) initialise() {
 	wzc.transport.Start()
 	wzc.channels.console, err = wzc.transport.
 		GetSubscriber().
-		Subscribe(wzlib.CHANNEL_CONSOLE, wzc.onControllerReplyEvent)
+		Subscribe(wzlib.CHANNEL_CONTROLLER, wzc.onControllerReplyEvent)
 	if err != nil {
 		log.Panicf("Unable to subscribe to console channel: %s\n", err.Error())
 	}
 }
 
 func (wzc *WzClient) start() {
-	envelope := wzlib.NewWzConsoleMessage()
-	envelope.Jid = "some-shit-jid"
-	out, err := envelope.Serialise()
-	if err != nil {
-		log.Println("Error serialising:", err.Error())
-	} else {
-		wzc.transport.GetPublisher().Publish(wzlib.CHANNEL_CONSOLE, out)
-	}
 }
 
-func (wzc *WzClient) stop() {
+func (wzc *WzClient) Boot() {
+	wzc.initialise()
+	wzc.start()
+}
+
+func (wzc *WzClient) Stop() {
 	wzc.transport.Disconnect()
 }
 
-func (wzc *WzClient) Call() {
-	wzc.initialise()
-	wzc.start()
-	wzc.stop()
+// Wait for the client get reply from the cluster with timeout.
+func (wzc *WzClient) Wait(sec int) {
+	if sec < 1 {
+		sec = 30
+	}
+
+	cs := 0
+	for {
+		if cs == sec {
+			break
+		}
+		ms := 0
+		for {
+			time.Sleep(time.Millisecond)
+			ms++
+			if ms > 0x400 || (len(wzc.replies) == int(wzc.expectedReplies) && wzc.expectedReplies > 0) {
+				break
+			}
+		}
+		cs++
+		log.Println("Waiting", sec-cs+1, "seconds")
+	}
 }
