@@ -75,18 +75,21 @@ func (wzc *WzClient) Wait(sec int) {
 
 	cs := 0
 	for {
-		if cs == sec {
-			break
+		if cs >= sec {
+			return
 		}
 		ms := 0
 		for {
 			time.Sleep(time.Millisecond)
 			ms++
-			if ms > 0x400 || (len(wzc.replies) == int(wzc.expectedReplies) && wzc.expectedReplies > 0) {
+			if ms > 0x400 {
 				break
 			}
+			if len(wzc.replies) == int(wzc.expectedReplies) && wzc.expectedReplies > 0 {
+				return
+			}
 		}
+		log.Println("Waiting", sec-cs, "seconds")
 		cs++
-		log.Println("Waiting", sec-cs+1, "seconds")
 	}
 }
