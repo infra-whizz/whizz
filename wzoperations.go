@@ -32,7 +32,7 @@ func (wzc *WzClient) Reject(fingerprints ...string) {
 
 func (wzc *WzClient) ListNew() {
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
-	envelope.Payload["command"] = "list.clients.new"
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND] = "list.clients.new"
 	wzc.send(envelope)
 	wzc.Wait(5)
 	log.Println("-- Begin reading")
@@ -45,7 +45,7 @@ func (wzc *WzClient) ListNew() {
 
 func (wzc *WzClient) ListRejected() {
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
-	envelope.Payload["command"] = "list.clients.rejected"
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND] = "list.clients.rejected"
 	wzc.send(envelope)
 	wzc.Wait(5)
 }

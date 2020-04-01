@@ -34,7 +34,7 @@ func (wzc *WzClient) onControllerReplyEvent(msg *nats.Msg) {
 	if err := envelope.LoadBytes(msg.Data); err != nil {
 		log.Println(err.Error())
 	} else {
-		batchMax, ok := envelope.Payload["batch.max"]
+		batchMax, ok := envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE]
 		if !ok || batchMax == nil {
 			log.Println("Discarding controller reply: no batch.max defined")
 		} else {
