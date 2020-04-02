@@ -12,6 +12,7 @@ import (
 
 func runner(ctx *cli.Context) error {
 	client := whizz.NewWhizzClient()
+	client.MuteLogger()
 	client.Call()
 
 	return nil
@@ -19,6 +20,7 @@ func runner(ctx *cli.Context) error {
 
 func client(ctx *cli.Context) error {
 	client := whizz.NewWhizzClient()
+	client.MuteLogger()
 	if ctx.Bool("accept") && (ctx.Bool("all") || len(ctx.StringSlice("finger")) > 0) {
 		client.Boot()
 		defer client.Stop()
