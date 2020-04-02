@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 
+	whizz_cli "github.com/infra-whizz/whizz/cli"
+
 	"github.com/infra-whizz/whizz"
 	"github.com/isbm/go-nanoconf"
 	"github.com/urfave/cli/v2"
@@ -32,7 +34,10 @@ func client(ctx *cli.Context) error {
 		defer client.Stop()
 		switch ctx.String("list") {
 		case "new":
-			client.ListNew()
+			fmtr := whizz_cli.NewWhizzCliFormatter()
+			for idx, clientData := range client.ListNew() {
+				fmtr.HostnameWithFp(idx+1, clientData["Fqdn"].(string), clientData["RsaFp"].(string))
+			}
 		case "rejected":
 			client.ListRejected()
 		}
@@ -52,6 +57,12 @@ func main() {
 		Usage:   "Ansible on Steroids",
 		Action:  runner,
 		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "log",
+				Aliases: []string{"l"},
+				Usage:   "Set logging level. Choices: 'quiet' or 'trace'.",
+				Value:   "quiet",
+			},
 			&cli.StringFlag{
 				Name:     "config",
 				Aliases:  []string{"c"},
