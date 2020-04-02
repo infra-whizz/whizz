@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	whizz_cli "github.com/infra-whizz/whizz/cli"
@@ -10,9 +11,21 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func prepareLogger(client *whizz.WzClient, ctx *cli.Context) {
+	switch ctx.String("log") {
+	case "quiet":
+		client.MuteLogger()
+	case "trace":
+	default:
+		fmt.Printf("Unknown logger option: %s\n", ctx.String("log"))
+		os.Exit(1)
+	}
+}
+
 func runner(ctx *cli.Context) error {
 	client := whizz.NewWhizzClient()
-	client.MuteLogger()
+	prepareLogger(client, ctx)
+
 	client.Call()
 
 	return nil
@@ -20,7 +33,8 @@ func runner(ctx *cli.Context) error {
 
 func client(ctx *cli.Context) error {
 	client := whizz.NewWhizzClient()
-	client.MuteLogger()
+	prepareLogger(client, ctx)
+
 	if ctx.Bool("accept") && (ctx.Bool("all") || len(ctx.StringSlice("finger")) > 0) {
 		client.Boot()
 		defer client.Stop()
