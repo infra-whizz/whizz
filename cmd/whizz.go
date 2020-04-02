@@ -35,27 +35,41 @@ func client(ctx *cli.Context) error {
 	client := whizz.NewWhizzClient()
 	prepareLogger(client, ctx)
 
-	if ctx.Bool("accept") && (ctx.Bool("all") || len(ctx.StringSlice("finger")) > 0) {
+	if ctx.String("client") == "accept" && (ctx.Bool("all") || len(ctx.StringSlice("finger")) > 0) {
 		client.Boot()
 		defer client.Stop()
-
-		client.Accept(ctx.StringSlice("finger")...)
-	} else if ctx.Bool("reject") && (ctx.Bool("all") || len(ctx.StringSlice("finger")) > 0) {
+		missing := client.Accept(ctx.StringSlice("finger")...)
+		if len(missing) > 0 {
+			fmt.Println("Following fingerprints as new systems was not found:")
+			for idx, fp := range missing {
+				fmt.Printf("%d. %s\n", idx+1, fp)
+			}
+		}
+	} else if ctx.String("client") == "reject" && (ctx.Bool("all") || len(ctx.StringSlice("finger")) > 0) {
 		client.Boot()
 		defer client.Stop()
-
 		client.Reject(ctx.StringSlice("finger")...)
+	} else if ctx.String("client") == "delete" && len(ctx.StringSlice("finger")) > 0 {
+		client.Boot()
+		defer client.Stop()
+		client.Delete(ctx.StringSlice("finger")...)
 	} else if ctx.String("list") == "new" || ctx.String("list") == "rejected" {
 		client.Boot()
 		defer client.Stop()
+		fmtr := whizz_cli.NewWhizzCliFormatter()
 		switch ctx.String("list") {
 		case "new":
-			fmtr := whizz_cli.NewWhizzCliFormatter()
-			for idx, clientData := range client.ListNew() {
+			clients := client.ListNew()
+			client.GetLogger().Debugf("Found %d new client(s)", len(clients))
+			for idx, clientData := range clients {
 				fmtr.HostnameWithFp(idx+1, clientData["Fqdn"].(string), clientData["RsaFp"].(string))
 			}
 		case "rejected":
-			client.ListRejected()
+			clients := client.ListRejected()
+			client.GetLogger().Debugf("Found %d rejected client(s)", len(clients))
+			for idx, clientData := range clients {
+				fmtr.HostnameWithFp(idx+1, clientData["Fqdn"].(string), clientData["RsaFp"].(string))
+			}
 		}
 	} else {
 		return cli.ShowSubcommandHelp(ctx)
@@ -94,15 +108,10 @@ func main() {
 			Usage:  "Operations with the clients",
 			Action: client,
 			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:    "accept",
-					Usage:   "Accept new clients. Requires --all or --finger.",
+				&cli.StringFlag{
+					Name:    "client",
+					Usage:   "Do (accept|reject|delete) clients. Requires --all or --finger. NOTE: --all does not apply to 'delete'",
 					Aliases: []string{"c"},
-				},
-				&cli.BoolFlag{
-					Name:    "reject",
-					Usage:   "Reject new clients. Requires --all or --finger.",
-					Aliases: []string{"r"},
 				},
 				&cli.BoolFlag{
 					Name:    "all",
