@@ -1,10 +1,10 @@
 package whizz
 
 import (
-	"log"
 	"time"
 
 	"github.com/infra-whizz/wzlib"
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
 	"github.com/nats-io/nats.go"
 )
@@ -18,6 +18,7 @@ type WzClient struct {
 	transport       *wzlib_transport.WzdPubSub
 	replies         []*wzlib_transport.WzGenericMessage
 	expectedReplies int64
+	wzlib_logger.WzLogger
 }
 
 func NewWhizzClient() *WzClient {
@@ -32,11 +33,11 @@ func NewWhizzClient() *WzClient {
 func (wzc *WzClient) onControllerReplyEvent(msg *nats.Msg) {
 	envelope := wzlib_transport.NewWzGenericMessage()
 	if err := envelope.LoadBytes(msg.Data); err != nil {
-		log.Println(err.Error())
+		wzc.GetLogger().Errorln(err.Error())
 	} else {
 		batchMax, ok := envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE]
 		if !ok || batchMax == nil {
-			log.Println("Discarding controller reply: no batch.max defined")
+			wzc.GetLogger().Warningln("Discarding controller reply: no batch.max defined")
 		} else {
 			wzc.expectedReplies = batchMax.(int64)
 			wzc.replies = append(wzc.replies, envelope)
@@ -51,7 +52,7 @@ func (wzc *WzClient) initialise() {
 		GetSubscriber().
 		Subscribe(wzlib.CHANNEL_CONTROLLER, wzc.onControllerReplyEvent)
 	if err != nil {
-		log.Panicf("Unable to subscribe to console channel: %s\n", err.Error())
+		wzc.GetLogger().Panicf("Unable to subscribe to console channel: %s\n", err.Error())
 	}
 }
 
@@ -89,7 +90,7 @@ func (wzc *WzClient) Wait(sec int) {
 				return
 			}
 		}
-		log.Println("Waiting", sec-cs, "seconds")
+		wzc.GetLogger().Debugln("Waiting", sec-cs, "seconds")
 		cs++
 	}
 }
