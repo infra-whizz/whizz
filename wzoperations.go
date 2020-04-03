@@ -123,3 +123,29 @@ func (wzc *WzClient) ListRejected() []map[string]interface{} {
 	wzc.gatherChunksOn("rejected", &clients)
 	return clients
 }
+
+// Search for the client machines (all of them, regardless status) by FQDN with globbing
+func (wzc *WzClient) Search(query string) []interface{} {
+	if query == "" {
+		return make([]interface{}, 0)
+	}
+
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND] = "clients.search"
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS] = map[string]interface{}{"query": query}
+
+	wzc.send(envelope)
+	wzc.Wait(5)
+
+	found := make([]interface{}, 0)
+	for _, msg := range wzc.replies {
+		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})["clients.found"]
+		if payload != nil {
+			for _, c := range payload.([]interface{}) {
+				found = append(found, c)
+			}
+		}
+	}
+
+	return found
+}
