@@ -74,7 +74,7 @@ func (wzc *WzClient) Accept(fingerprints ...string) (missing []string) {
 }
 
 // Reject unaccepted (new) clients
-func (wzc *WzClient) Reject(fingerprints ...string) {
+func (wzc *WzClient) Reject(fingerprints ...string) (missing []string) {
 	var msg string
 	if len(fingerprints) > 0 {
 		msg = fmt.Sprintf("%d client machines", len(fingerprints))
@@ -82,6 +82,25 @@ func (wzc *WzClient) Reject(fingerprints ...string) {
 		msg = "all new client machines"
 	}
 	wzc.GetLogger().Debugf("Rejecting %s", msg)
+
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND] = "clients.reject"
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS] = map[string]interface{}{"fingerprints": fingerprints}
+
+	wzc.send(envelope)
+	wzc.Wait(5)
+
+	missing = make([]string, 0)
+	for _, msg := range wzc.replies {
+		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})["rejected.missing"]
+		if payload != nil {
+			for _, missingFp := range payload.([]interface{}) {
+				missing = append(missing, missingFp.(string))
+			}
+		}
+	}
+	return
+
 }
 
 // Delete any clients regardless what their status is, by fingerprints
