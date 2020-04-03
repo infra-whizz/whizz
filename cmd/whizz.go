@@ -128,6 +128,11 @@ func main() {
 					Usage:   "List clients. Choices: (new|rejected)",
 					Aliases: []string{"l"},
 				},
+				&cli.StringFlag{
+					Name:    "search",
+					Usage:   "Search clients by hostname. Wildcards supported.",
+					Aliases: []string{"s"},
+				},
 			},
 		},
 	}
