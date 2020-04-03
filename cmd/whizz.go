@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	whizz_cli "github.com/infra-whizz/whizz/cli"
-
 	"github.com/infra-whizz/whizz"
+	whizz_cli "github.com/infra-whizz/whizz/cli"
 	"github.com/isbm/go-nanoconf"
 	"github.com/urfave/cli/v2"
 )
@@ -71,6 +70,11 @@ func client(ctx *cli.Context) error {
 				fmtr.HostnameWithFp(idx+1, clientData["Fqdn"].(string), clientData["RsaFp"].(string))
 			}
 		}
+	} else if ctx.String("search") != "" {
+		client.Boot()
+		defer client.Stop()
+		client.GetLogger().Debugln("Searching for", ctx.String("search"), "host[s]")
+		whizz_cli.NewWhizzCliFormatter().ListSystems(client.Search(ctx.String("search")))
 	} else {
 		return cli.ShowSubcommandHelp(ctx)
 	}
