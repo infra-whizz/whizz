@@ -51,7 +51,13 @@ func client(ctx *cli.Context) error {
 	} else if ctx.String("client") == "delete" && len(ctx.StringSlice("finger")) > 0 {
 		client.Boot()
 		defer client.Stop()
-		client.Delete(ctx.StringSlice("finger")...)
+		missing := client.Delete(ctx.StringSlice("finger")...)
+		if len(missing) > 0 {
+			fmt.Println("Following fingerprints as deleted systems was not found:")
+			for idx, fp := range missing {
+				fmt.Printf("%d. %s\n", idx+1, fp)
+			}
+		}
 	} else if ctx.String("list") == "new" || ctx.String("list") == "rejected" {
 		client.Boot()
 		defer client.Stop()

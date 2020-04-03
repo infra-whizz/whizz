@@ -104,8 +104,31 @@ func (wzc *WzClient) Reject(fingerprints ...string) (missing []string) {
 }
 
 // Delete any clients regardless what their status is, by fingerprints
-func (wzc *WzClient) Delete(fingerprints ...string) {
+func (wzc *WzClient) Delete(fingerprints ...string) (missing []string) {
 	wzc.GetLogger().Debugf("Deleting %d client machines", len(fingerprints))
+	if len(fingerprints) == 0 {
+		wzc.GetLogger().Errorln("Unable to delete clients: no fingerprints were suggested")
+		return
+	}
+
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND] = "clients.delete"
+	envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS] = map[string]interface{}{"fingerprints": fingerprints}
+
+	wzc.send(envelope)
+	wzc.Wait(5)
+
+	missing = make([]string, 0)
+	for _, msg := range wzc.replies {
+		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})["deleted.missing"]
+		if payload != nil {
+			for _, missingFp := range payload.([]interface{}) {
+				missing = append(missing, missingFp.(string))
+			}
+		}
+	}
+
+	return
 }
 
 // ListNew clients returning info about each client.
