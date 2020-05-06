@@ -14,10 +14,9 @@ type WzChannels struct {
 }
 
 type WzClient struct {
-	channels        *WzChannels
-	transport       *wzlib_transport.WzdPubSub
-	replies         []*wzlib_transport.WzGenericMessage
-	expectedReplies int64
+	channels  *WzChannels
+	events    *WzEvents
+	transport *wzlib_transport.WzdPubSub
 	wzlib_logger.WzLogger
 }
 
@@ -25,24 +24,8 @@ func NewWhizzClient() *WzClient {
 	wzc := new(WzClient)
 	wzc.transport = wzlib_transport.NewWizPubSub()
 	wzc.channels = new(WzChannels)
-	wzc.replies = make([]*wzlib_transport.WzGenericMessage, 0)
+	wzc.events = NewWzEvents()
 	return wzc
-}
-
-// Controller replied
-func (wzc *WzClient) onControllerReplyEvent(msg *nats.Msg) {
-	envelope := wzlib_transport.NewWzGenericMessage()
-	if err := envelope.LoadBytes(msg.Data); err != nil {
-		wzc.GetLogger().Errorln(err.Error())
-	} else {
-		batchMax, ok := envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE]
-		if !ok || batchMax == nil {
-			wzc.GetLogger().Warningln("Discarding controller reply: no batch.max defined")
-		} else {
-			wzc.expectedReplies = batchMax.(int64)
-			wzc.replies = append(wzc.replies, envelope)
-		}
-	}
 }
 
 func (wzc *WzClient) initialise() {
@@ -50,7 +33,7 @@ func (wzc *WzClient) initialise() {
 	wzc.transport.Start()
 	wzc.channels.console, err = wzc.transport.
 		GetSubscriber().
-		Subscribe(wzlib.CHANNEL_CONTROLLER, wzc.onControllerReplyEvent)
+		Subscribe(wzlib.CHANNEL_CONTROLLER, wzc.events.onControllerReplyEvent)
 	if err != nil {
 		wzc.GetLogger().Panicf("Unable to subscribe to console channel: %s\n", err.Error())
 	}
@@ -86,7 +69,7 @@ func (wzc *WzClient) Wait(sec int) {
 			if ms > 0x400 {
 				break
 			}
-			if len(wzc.replies) == int(wzc.expectedReplies) && wzc.expectedReplies > 0 {
+			if len(wzc.events.replies) == int(wzc.events.expectedReplies) && wzc.events.expectedReplies > 0 {
 				return
 			}
 		}

@@ -29,7 +29,7 @@ func (wzc *WzClient) getRepliesOnCommand(command string) {
 
 // Join all the batch chunks on a return point
 func (wzc *WzClient) gatherChunksOn(returnpoint string, clients *[]map[string]interface{}) {
-	for _, msg := range wzc.replies {
+	for _, msg := range wzc.events.replies {
 		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})[returnpoint]
 		if payload != nil {
 			for _, client := range payload.([]interface{}) {
@@ -62,7 +62,7 @@ func (wzc *WzClient) Accept(fingerprints ...string) (missing []string) {
 	wzc.Wait(5)
 
 	missing = make([]string, 0)
-	for _, msg := range wzc.replies {
+	for _, msg := range wzc.events.replies {
 		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})["accepted.missing"]
 		if payload != nil {
 			for _, missingFp := range payload.([]interface{}) {
@@ -91,7 +91,7 @@ func (wzc *WzClient) Reject(fingerprints ...string) (missing []string) {
 	wzc.Wait(5)
 
 	missing = make([]string, 0)
-	for _, msg := range wzc.replies {
+	for _, msg := range wzc.events.replies {
 		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})["rejected.missing"]
 		if payload != nil {
 			for _, missingFp := range payload.([]interface{}) {
@@ -119,7 +119,7 @@ func (wzc *WzClient) Delete(fingerprints ...string) (missing []string) {
 	wzc.Wait(5)
 
 	missing = make([]string, 0)
-	for _, msg := range wzc.replies {
+	for _, msg := range wzc.events.replies {
 		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})["deleted.missing"]
 		if payload != nil {
 			for _, missingFp := range payload.([]interface{}) {
@@ -161,12 +161,10 @@ func (wzc *WzClient) Search(query string) []interface{} {
 	wzc.Wait(5)
 
 	found := make([]interface{}, 0)
-	for _, msg := range wzc.replies {
+	for _, msg := range wzc.events.replies {
 		payload := msg.Payload[wzlib_transport.PAYLOAD_FUNC_RET].(map[string]interface{})["clients.found"]
 		if payload != nil {
-			for _, c := range payload.([]interface{}) {
-				found = append(found, c)
-			}
+			found = append(found, payload.([]interface{})...)
 		}
 	}
 
