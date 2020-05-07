@@ -3,6 +3,8 @@ package whizz
 import (
 	"time"
 
+	wzlib_crypto "github.com/infra-whizz/wzlib/crypto"
+
 	"github.com/infra-whizz/wzlib"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
@@ -14,9 +16,10 @@ type WzChannels struct {
 }
 
 type WzClient struct {
-	channels  *WzChannels
-	events    *WzEvents
-	transport *wzlib_transport.WzdPubSub
+	channels     *WzChannels
+	events       *WzEvents
+	transport    *wzlib_transport.WzdPubSub
+	cryptobundle *wzlib_crypto.WzCryptoBundle
 	wzlib_logger.WzLogger
 }
 
@@ -25,7 +28,14 @@ func NewWhizzClient() *WzClient {
 	wzc.transport = wzlib_transport.NewWizPubSub()
 	wzc.channels = new(WzChannels)
 	wzc.events = NewWzEvents()
+	wzc.cryptobundle = wzlib_crypto.NewWzCryptoBundle()
+
 	return wzc
+}
+
+// GetCryptoBundle returns a cryptobundle with AES, RSA and utils API
+func (wzc *WzClient) GetCryptoBundle() *wzlib_crypto.WzCryptoBundle {
+	return wzc.cryptobundle
 }
 
 func (wzc *WzClient) initialise() {
