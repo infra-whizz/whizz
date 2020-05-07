@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/infra-whizz/whizz"
 	whizz_cli "github.com/infra-whizz/whizz/cli"
+	wzlib_utils "github.com/infra-whizz/wzlib/utils"
 	"github.com/isbm/go-nanoconf"
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +20,7 @@ func prepareLogger(client *whizz.WzClient, ctx *cli.Context) {
 	case "trace":
 	default:
 		fmt.Printf("Unknown logger option: %s\n", ctx.String("log"))
-		os.Exit(1)
+		os.Exit(wzlib_utils.EX_GENERIC)
 	}
 }
 
@@ -30,9 +33,43 @@ func runner(ctx *cli.Context) error {
 	return nil
 }
 
-func client(ctx *cli.Context) error {
+// managePKI manages the PKI
+func managePki(ctx *cli.Context) error {
+	conf := nanoconf.NewConfig(ctx.String("config"))
 	client := whizz.NewWhizzClient()
 	prepareLogger(client, ctx)
+
+	if ctx.Bool("generate") {
+		pkiDir := conf.Root().String("pki-path", "")
+		client.GetLogger().Debugf("Generating PKI keys into %s", pkiDir)
+		if err := client.GetCryptoBundle().GetRSA().GenerateKeyPair(pkiDir); err != nil {
+			msg := "Error generating PKI: %s"
+			if client.GetLogger().GetLevel() != logrus.TraceLevel {
+				fmt.Printf(msg, err.Error())
+			} else {
+				client.GetLogger().Errorf(msg, err.Error())
+			}
+		}
+	}
+
+	return nil
+}
+
+// loadPKI loads default keypair location
+func loadPKI(client *whizz.WzClient, pkiDir string) {
+	if err := client.GetCryptoBundle().GetRSA().LoadPEMKeyPair(pkiDir); err != nil {
+		client.GetLogger().Errorf("Error loading PKI keys: %s", err.Error())
+		os.Exit(wzlib_utils.EX_GENERIC)
+	}
+}
+
+// run the client
+func client(ctx *cli.Context) error {
+	conf := nanoconf.NewConfig(ctx.String("config"))
+	client := whizz.NewWhizzClient()
+	prepareLogger(client, ctx)
+
+	loadPKI(client, conf.Root().String("pki-path", ""))
 
 	if ctx.String("client") == "accept" && (ctx.Bool("all") || len(ctx.StringSlice("finger")) > 0) {
 		client.Boot()
@@ -113,6 +150,18 @@ func main() {
 		},
 	}
 	app.Commands = []*cli.Command{
+		{
+			Name:   "pki",
+			Usage:  "Manage public key infrastructure",
+			Action: managePki,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "generate",
+					Usage:   "Generate keypair. NOTE: this is possible only if no keys are present.",
+					Aliases: []string{"g"},
+				},
+			},
+		},
 		{
 			Name:   "client",
 			Usage:  "Operations with the clients",
