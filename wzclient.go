@@ -42,11 +42,13 @@ func (wzc *WzClient) initialise() {
 func (wzc *WzClient) start() {
 }
 
+// Boot the whizz client
 func (wzc *WzClient) Boot() {
 	wzc.initialise()
 	wzc.start()
 }
 
+// Stop and teardown everything: disconnect, cleanup etc.
 func (wzc *WzClient) Stop() {
 	wzc.transport.Disconnect()
 }
