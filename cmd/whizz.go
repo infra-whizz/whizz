@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
+
+	wzlib_crypto "github.com/infra-whizz/wzlib/crypto"
 
 	"github.com/sirupsen/logrus"
 
@@ -42,12 +45,24 @@ func managePki(ctx *cli.Context) error {
 	if ctx.Bool("generate") {
 		pkiDir := conf.Root().String("pki-path", "")
 		client.GetLogger().Debugf("Generating PKI keys into %s", pkiDir)
+		for _, keyFilename := range []string{wzlib_crypto.RSA_PEM_PRIVKEY, wzlib_crypto.RSA_PEM_PUBKEY, wzlib_crypto.RSA_BIN_PRIVKEY, wzlib_crypto.RSA_BIN_PUBKEY} {
+			_, err := os.Stat(path.Join(pkiDir, keyFilename))
+			if !os.IsNotExist(err) {
+				msg := fmt.Sprintf("Seems keys are already generated: found %s in place.", keyFilename)
+				if client.GetLogger().GetLevel() != logrus.TraceLevel {
+					fmt.Println(msg)
+				} else {
+					client.GetLogger().Errorln(msg)
+				}
+				os.Exit(wzlib_utils.EX_GENERIC)
+			}
+		}
 		if err := client.GetCryptoBundle().GetRSA().GenerateKeyPair(pkiDir); err != nil {
-			msg := "Error generating PKI: %s"
+			msg := fmt.Sprintf("Error generating PKI: %s", err.Error())
 			if client.GetLogger().GetLevel() != logrus.TraceLevel {
-				fmt.Printf(msg, err.Error())
+				fmt.Println(msg)
 			} else {
-				client.GetLogger().Errorf(msg, err.Error())
+				client.GetLogger().Errorln(msg)
 			}
 		}
 	}
