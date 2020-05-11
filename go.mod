@@ -12,9 +12,9 @@ require (
 	github.com/nats-io/nats.go v1.9.2
 	github.com/sirupsen/logrus v1.6.0
 	github.com/urfave/cli/v2 v2.2.0
-	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79 // indirect
+	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
 	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f // indirect
-	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3 // indirect
+	golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 )
 
