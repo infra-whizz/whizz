@@ -9,7 +9,7 @@ import (
 
 // Send message on behalf of the console
 func (wzc *WzClient) send(evp *wzlib_transport.WzGenericMessage) {
-	out, err := evp.Serialise()
+	out, err := wzc.cryptobundle.SignMessage(evp)
 	if err != nil {
 		wzc.GetLogger().Errorln("Error serialising envelope:", err.Error())
 	} else {
