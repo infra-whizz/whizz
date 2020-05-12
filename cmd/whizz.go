@@ -76,6 +76,7 @@ func loadPKI(client *whizz.WzClient, pkiDir string) {
 		client.GetLogger().Errorf("Error loading PKI keys: %s", err.Error())
 		os.Exit(wzlib_utils.EX_GENERIC)
 	}
+	client.SetupMachineIdUtil(path.Join(pkiDir, "machine.id"))
 }
 
 // run the client

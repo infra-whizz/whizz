@@ -3,6 +3,8 @@ package whizz
 import (
 	"time"
 
+	wzlib_utils "github.com/infra-whizz/wzlib/utils"
+
 	wzlib_crypto "github.com/infra-whizz/wzlib/crypto"
 
 	"github.com/infra-whizz/wzlib"
@@ -20,6 +22,8 @@ type WzClient struct {
 	events       *WzEvents
 	transport    *wzlib_transport.WzdPubSub
 	cryptobundle *wzlib_crypto.WzCryptoBundle
+
+	wzlib_utils.WzMachineIDUtil
 	wzlib_logger.WzLogger
 }
 
